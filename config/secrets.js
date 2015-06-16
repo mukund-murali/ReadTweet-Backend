@@ -85,8 +85,8 @@ module.exports = {
   },
 
   twitter: {
-    consumerKey: process.env.TWITTER_KEY || '6NNBDyJ2TavL407A3lWxPFKBI',
-    consumerSecret: process.env.TWITTER_SECRET  || 'ZHaYyK3DQCqv49Z9ofsYdqiUgeoICyh6uoBgFfu7OeYC7wTQKa',
+    consumerKey: process.env.TWITTER_KEY || 'UAa2G9orWHWg5pQYiz9watKgz',
+    consumerSecret: process.env.TWITTER_SECRET  || 'XIq9dqi43eRG1zs4wBxQoLwGS5HRbLUB0ooRAwCEvV8DAJXjT0',
     callbackURL: '/auth/twitter/callback',
     passReqToCallback: true
   },
