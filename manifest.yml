@@ -2,7 +2,7 @@ applications:
 - services: 
   - hackstart-db
   host: hackstart
-  disk: 1024M 
+  disk: 768M
   name: hackstart
   command: node app.js 
   path: . 
