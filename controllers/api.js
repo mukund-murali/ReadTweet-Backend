@@ -267,7 +267,7 @@ exports.getTwitter = function(req, res, next) {
     access_token: token.accessToken,
     access_token_secret: token.tokenSecret
   });
-  T.get('search/tweets', { q: 'nodejs' count: 10 }, function(err, reply) {
+  T.get('search/tweets', { q: 'nodejs', count: 10 }, function(err, reply) {
     if (err) return next(err);
     res.render('api/twitter', {
       title: 'Twitter API',
