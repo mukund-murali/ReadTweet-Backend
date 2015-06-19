@@ -42,7 +42,11 @@ block content
             img.media-object(src='#{image}', style='width: 64px; height: 64px;')
           .media-body
             strong.media-heading #{tweet.user.name}
-            span.text-muted  @#{tweet.user.screen_name}
+            span.text-muted  @#{tweet.user.screen_name} - 
+            if tweet.isRelevant
+              i.fa.fa-check
+            else
+              i.fa.fa-times
             p= tweet.text
             input(type='button', value='Interesting', onclick='markConsumed(#{tweet.id})')
             input(type='button', value='I dont care', onclick='markIgnored(#{tweet.id})')

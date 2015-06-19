@@ -97,7 +97,7 @@ exports.getTwitter = function(req, res, next) {
   T.get('statuses/home_timeline', {'count': 20}, function(err, reply) {
     if (err) return next(err);
     allTweets = reply;
-    getRelevantTweets(allTweets, req.user, function(relevantTweets) {
+    getRelevantTweets(allTweets, req.user, function(relevantTweets, allTweets) {
       // sorting tweets by ID
       allTweets.sort(function(a, b) {
           return a.id - b.id;
@@ -308,7 +308,7 @@ var isRelevantTweet = function(tweet, user, callback) {
   // If we find that the user is indeed interested in those keywords, we mark it relevant
   getKeywords(tweet, function(err, keywords) {
     if (err) {
-      callback(false);
+      callback(false, tweet);
       return;
     }
     getNoRelevantKeywords(keywords, user, function(noRelevantKeywords) {
@@ -317,7 +317,7 @@ var isRelevantTweet = function(tweet, user, callback) {
       if (tweetRelevance >= THRESHOLD_FOR_TWEET_RELEVANCE) {
         callback(true, tweet);
       } else {
-        callback(false);
+        callback(false, tweet);
       }
     });  
   });
@@ -327,19 +327,23 @@ var getRelevantTweets = function(tweets, user, callback) {
   var relevantTweets = [];
   var timesToRun = tweets.length;
   if (timesToRun == 0) {
-    callback(relevantTweets);
+    callback(relevantTweets, tweets);
     return;
   }
   var timesRun = 0;
+  var allTweets = []
   for (var i = 0; i < timesToRun; i++) {
     var tweet = tweets[i];
     isRelevantTweet(tweet, user, function(isRelevant, relevantTweet) {
+      relevantTweet.isRelevant = false;
       if (isRelevant) {
-        relevantTweets.push(relevantTweet)
+        relevantTweet.isRelevant = true;
+        relevantTweets.push(relevantTweet);
       }
+      allTweets.push(relevantTweet);
       timesRun++;
       if (timesRun >= timesToRun) {
-        callback(relevantTweets);
+        callback(relevantTweets, allTweets);
         return;
       }
     });
