@@ -17,7 +17,6 @@ exports.getApi = function(req, res) {
   });
 };
 
-
 /**
  * GET /api/scraping
  * Web scraping example using Cheerio library.
@@ -47,7 +46,8 @@ exports.getScraping = function(req, res, next) {
   {"id":816653,"id_str":"816653","name":"TechCrunch","screen_name":"TechCrunch","location":"San Francisco, CA",
   "description":"Breaking technology news, analysis, and opinions from TechCrunch. The number one guide for all things tech.",
   "url":"http:\/\/t.co\/b5Oyx12qGG",
-  "entities":{"url":{"urls":[{"url":"http:\/\/t.co\/b5Oyx12qGG","expanded_url":"http:\/\/techcrunch.com","display_url":"techcrunch.com",
+  "entities":{"url":{"urls":[{"url":"http:\/\/t.co\/b5Oyx12qGG","expanded_url":"http:\/\/techcrunch.com",
+  "display_url":"techcrunch.com",
   "indices":[0,22]}]},"description":{"urls":[]}},"protected":false,"followers_count":5262846,"friends_count":687,
   "listed_count":97922,"created_at":"Wed Mar 07 01:27:09 +0000 2007",
   "favourites_count":652,"utc_offset":-25200,"time_zone":"Pacific Time (US & Canada)","geo_enabled":true,
@@ -55,7 +55,8 @@ exports.getScraping = function(req, res, next) {
   "is_translation_enabled":true,"profile_background_color":"149500",
   "profile_background_image_url":"http:\/\/pbs.twimg.com\/profile_background_images\/542331481398317056\/81Rbm71g.png",
   "profile_background_image_url_https":"https:\/\/pbs.twimg.com\/profile_background_images\/542331481398317056\/81Rbm71g.png",
-  "profile_background_tile":false,"profile_image_url":"http:\/\/pbs.twimg.com\/profile_images\/469171480832380928\/rkZR1jIh_normal.png",
+  "profile_background_tile":false,
+  "profile_image_url":"http:\/\/pbs.twimg.com\/profile_images\/469171480832380928\/rkZR1jIh_normal.png",
   "profile_image_url_https":"https:\/\/pbs.twimg.com\/profile_images\/469171480832380928\/rkZR1jIh_normal.png",
   "profile_banner_url":"https:\/\/pbs.twimg.com\/profile_banners\/816653\/1431096993","profile_link_color":"097000",
   "profile_sidebar_border_color":"FFFFFF","profile_sidebar_fill_color":"DDFFCC","profile_text_color":"222222",
@@ -69,6 +70,17 @@ exports.getScraping = function(req, res, next) {
 
 */
 
+
+var getTweetId = function(tweet) {
+  return tweet.id;
+};
+
+var getTweetString = function(tweet) {
+  return tweet.text;
+};
+
+var TweetModel = require('../models/Tweet');
+
 /**
  * GET /api/twitter
  * Twiter API example.
@@ -81,11 +93,16 @@ exports.getTwitter = function(req, res, next) {
     access_token: token.accessToken,
     access_token_secret: token.tokenSecret
   });
-  T.get('statuses/home_timeline', function(err, reply) {
+  T.get('statuses/home_timeline', {'count': 5}, function(err, reply) {
     if (err) return next(err);
-    res.render('api/twitter', {
-      title: 'Tweets',
-      tweets: reply
+    allTweets = reply;
+    getRelevantTweets(allTweets, req.user, function(relevantTweets) {
+      console.log("rel tweets:", relevantTweets.length);
+      res.render('api/twitter', {
+        title: 'Tweets',
+        tweets: allTweets,
+        relevantTweets: relevantTweets
+      });
     });
   });
 };
@@ -113,4 +130,212 @@ exports.postTwitter = function(req, res, next) {
     req.flash('success', { msg: 'Tweet has been posted.'});
     res.redirect('/api/twitter');
   });
+};
+
+
+
+
+
+
+// Helper functions. To move it to a different place
+
+THRESHOLD_FOR_WORD_RELEVANCE = 0.5 
+
+var getWordRelevance = function(obj) {
+  return obj.ignored / obj.occurence;
+}
+
+var UserKeywordModel = require('../models/UserKeyword');
+
+var isRelevantKeyword = function(keyword, user, callback) {
+  UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
+    if (err || doc === null) {
+      // we have never seen the keyword for this user yet.
+      // In this case, we assume that the keyword is relevant.
+      callback(true);
+      return;
+    }
+    if (getWordRelevance(doc) > THRESHOLD_FOR_WORD_RELEVANCE) {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+}
+
+THRESHOLD_FOR_TWEET_RELEVANCE = 0.5
+
+var getTweetRelevance = function(no_relevant_keywords, no_keywords) {
+  return no_relevant_keywords/no_keywords;
+}
+
+var isTweetFromANews = function(tweet) {
+  return true;
+}
+
+var doesTweetHaveLink = function(tweet) {
+  return true;
+}
+
+/* 
+probably store tweetId and its keywords temporarily to avoid alchemy API calls 
+since same tweet could be referenced by multiple users multiple times 
+Two days would be a reasonable no. days to store. - Should research on the no. days a tweet is usually refenced.
+*/
+
+var getNoRelevantKeywords = function(keywords, user, callback) {
+  var timesToRun = keywords.length;
+  if (timesToRun == 0) {
+    // if no keywords are there.
+    callback(0);
+    return;
+  }
+  var timesRun = 0;
+  var noRelevantKeywords = 0;
+  for (var i = 0; i < timesToRun; i++) {
+      var keyword = keywords[i];
+      isRelevantKeyword(keyword, user, function(isRelevant) {
+        if (isRelevant) {
+          noRelevantKeywords++;
+        }
+        timesRun++;
+        if (timesRun >= timesToRun) {
+          callback(noRelevantKeywords);
+          return;
+        }
+      });
+    }
+};
+
+/*
+# before using any tweet for any processing, save the tweet data temporarily. 
+# this saves all the required information in a temporary database for faster retreival in the future. 
+*/
+var _saveTweetInfo = function(tweetId, tweetString, keywords, callback) {
+  var tweetObj = new TweetModel();
+  tweetObj.tweetId = tweetId;
+  tweetObj.keywords = keywords;
+  tweetObj.tweetString = tweetString;
+
+  tweetObj.save(function(err) {
+      if (err)
+          callback(true);
+      callback(false, tweetObj);
+  })
+}
+
+var ALCHEMY_API_GET_TEXT_RANKED_KEYKORDS_URL = "http://access.alchemyapi.com/calls/text/TextGetRankedKeywords";
+
+var KEY_TEXT = "text";
+var API_KEY = "apikey";
+var OUTPUT_MODE = "outputMode";
+
+var ALCHEMY_API_KEY = "53a800df7583acad0f0c37d3e5fad54a91e2b3ae";
+
+var findKeywords = function(tweet, callback) {
+  var params = {
+    form: {
+      apikey: ALCHEMY_API_KEY,
+      text: getTweetString(tweet),
+      outputMode: 'json'
+    }
+  };
+  request.post(ALCHEMY_API_GET_TEXT_RANKED_KEYKORDS_URL, params, function(err, httpResponse, body) {
+    if (err) {
+      callback([]);
+      return;
+    }
+    body = JSON.parse(body);
+    var keywords = [];
+    var keywordResponse = body.keywords;
+    for (var i = 0; i < keywordResponse.length; i++) {
+        keywords.push(keywordResponse[i].text);
+    }
+    callback(keywords);
+  });
+}
+
+var saveTweetInfo = function(tweet, callback) {
+  findKeywords(tweet, function(keywords) {
+    tweetId = getTweetId(tweet);
+    tweetString = getTweetString(tweet);
+    _saveTweetInfo(tweetId, tweetString, keywords, callback);
+  });
+}
+
+/*
+# this function gets the keywords of any tweet
+# This takes care of saving the tweet information in server temporarily for better handling
+*/
+
+var getKeywords = function(tweet, callback) {
+  var tweetId = getTweetId(tweet);
+  TweetModel.findOne({ tweetId: tweetId }, function (err, doc) {
+    if (err || doc === null) {
+      // object does not exist
+      saveTweetInfo(tweet, function(err, tweetObj) {
+        if (err) {
+          callback(true);
+        } else {
+          callback(false, tweetObj.keywords);  
+        }
+      });
+    } else {
+      callback(false, doc.keywords);
+    }
+  }); 
+};
+
+var isRelevantTweet = function(tweet, user, callback) {
+  // if a tweet is not from a news channel, always mark it relevant
+  if (!isTweetFromANews(tweet)) {
+    callback(true);
+    return;
+  }
+  hasLink = doesTweetHaveLink(tweet)
+  // if a tweet does not have any link - it is relevant
+  if (!hasLink) {
+    callback(true);
+    return;
+  }
+  // if a tweet has a link - assuming it is from news 
+  // we look at the keywords and see if the user is interested in those keywords.
+  // If we find that the user is indeed interested in those keywords, we mark it relevant
+  getKeywords(tweet, function(err, keywords) {
+    if (err) {
+      callback(false);
+      return;
+    }
+    getNoRelevantKeywords(keywords, user, function(noRelevantKeywords) {
+      var tweetRelevance = getTweetRelevance(noRelevantKeywords, keywords.length);
+      if (tweetRelevance >= THRESHOLD_FOR_TWEET_RELEVANCE) {
+        callback(true);
+      } else {
+        callback(false);
+      }
+    });  
+  });
+};
+
+var getRelevantTweets = function(tweets, user, callback) {
+  var relevantTweets = [];
+  var timesToRun = tweets.length;
+  if (timesToRun == 0) {
+    callback(relevantTweets);
+    return;
+  }
+  var timesRun = 0;
+  for (var i = 0; i < timesToRun; i++) {
+    var tweet = tweets[i];
+    isRelevantTweet(tweet, user, function(isRelevant) {
+      if (isRelevant) {
+        relevantTweets.push(tweet)
+      }
+      timesRun++;
+      if (timesRun >= timesToRun) {
+        callback(relevantTweets);
+        return;
+      }
+    });
+  }
 };
