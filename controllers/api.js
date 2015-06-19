@@ -80,6 +80,7 @@ var getTweetString = function(tweet) {
 };
 
 var TweetModel = require('../models/Tweet');
+var UserKeywordModel = require('../models/UserKeyword');
 
 /**
  * GET /api/twitter
@@ -93,11 +94,17 @@ exports.getTwitter = function(req, res, next) {
     access_token: token.accessToken,
     access_token_secret: token.tokenSecret
   });
-  T.get('statuses/home_timeline', {'count': 5}, function(err, reply) {
+  T.get('statuses/home_timeline', {'count': 20}, function(err, reply) {
     if (err) return next(err);
     allTweets = reply;
     getRelevantTweets(allTweets, req.user, function(relevantTweets) {
-      console.log("rel tweets:", relevantTweets.length);
+      // sorting tweets by ID
+      allTweets.sort(function(a, b) {
+          return a.id - b.id;
+      });
+      relevantTweets.sort(function(a, b) {
+          return a.id - b.id;
+      });
       res.render('api/twitter', {
         title: 'Tweets',
         tweets: allTweets,
@@ -134,18 +141,16 @@ exports.postTwitter = function(req, res, next) {
 
 
 
-
-
-
 // Helper functions. To move it to a different place
 
 THRESHOLD_FOR_WORD_RELEVANCE = 0.5 
 
 var getWordRelevance = function(obj) {
-  return obj.ignored / obj.occurence;
+  var relevance = (obj.occurence - obj.ignored) / obj.occurence;
+  console.log("word rel:", obj, relevance);
+  return relevance
+  ;
 }
-
-var UserKeywordModel = require('../models/UserKeyword');
 
 var isRelevantKeyword = function(keyword, user, callback) {
   UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
@@ -289,13 +294,13 @@ var getKeywords = function(tweet, callback) {
 var isRelevantTweet = function(tweet, user, callback) {
   // if a tweet is not from a news channel, always mark it relevant
   if (!isTweetFromANews(tweet)) {
-    callback(true);
+    callback(true, tweet);
     return;
   }
   hasLink = doesTweetHaveLink(tweet)
   // if a tweet does not have any link - it is relevant
   if (!hasLink) {
-    callback(true);
+    callback(true, tweet);
     return;
   }
   // if a tweet has a link - assuming it is from news 
@@ -308,8 +313,9 @@ var isRelevantTweet = function(tweet, user, callback) {
     }
     getNoRelevantKeywords(keywords, user, function(noRelevantKeywords) {
       var tweetRelevance = getTweetRelevance(noRelevantKeywords, keywords.length);
+      console.log(getTweetString(tweet), tweetRelevance, noRelevantKeywords, keywords.length);
       if (tweetRelevance >= THRESHOLD_FOR_TWEET_RELEVANCE) {
-        callback(true);
+        callback(true, tweet);
       } else {
         callback(false);
       }
@@ -327,9 +333,9 @@ var getRelevantTweets = function(tweets, user, callback) {
   var timesRun = 0;
   for (var i = 0; i < timesToRun; i++) {
     var tweet = tweets[i];
-    isRelevantTweet(tweet, user, function(isRelevant) {
+    isRelevantTweet(tweet, user, function(isRelevant, relevantTweet) {
       if (isRelevant) {
-        relevantTweets.push(tweet)
+        relevantTweets.push(relevantTweet)
       }
       timesRun++;
       if (timesRun >= timesToRun) {

@@ -3,27 +3,20 @@ extends ../layout
 block content
 
   script(type='text/javascript').
+    BASE_URL = '/api/v1/tweets/';
     markIgnored = function(tweetId) {
-      alert(tweetId);
+      var url = BASE_URL + 'ignore/' + tweetId;
+      $.post(url, function(data) {
+        alert(data);
+      });
     };
-
-  .page-header
-    h2
-      i.fa.fa-twitter(style='color: #4099ff')
-      | Twitter API
-
-  .btn-group.btn-group-justified
-    a.btn.btn-success(href='https://github.com/ttezel/twit', target='_blank')
-      i.fa.fa-file-text-o
-      | Twit Library Docs
-    a.btn.btn-success(href='https://dev.twitter.com/docs', target='_blank')
-      i.fa.fa-check-square-o
-      | Overview
-    a.btn.btn-success(href='https://dev.twitter.com/docs/api/1.1', target='_blank')
-      i.fa.fa-code-fork
-      | API Endpoints
-
-  br
+    markConsumed = function(tweetId) {
+      var url = BASE_URL + 'consume/' + tweetId;
+      // post to the above URL
+      $.post(url, function(data) {
+        alert(data);
+      });
+    }
 
   .well
     h4 Compose new Tweet
@@ -38,16 +31,33 @@ block content
 
   br
 
-  .lead Timeline
+  div(style='float: left; width: 50%;')
+    .lead All Tweets
 
-  ul.media-list
-    for tweet in tweets
-      li.media
-        a.pull-left(href='#')
-          - var image = tweet.user.profile_image_url.replace('_normal', '');
-          img.media-object(src='#{image}', style='width: 64px; height: 64px;')
-        .media-body
-          strong.media-heading #{tweet.user.name}
-          span.text-muted  @#{tweet.user.screen_name}
-          p= tweet.text
-          input(type='button', value='Ignore', onclick='markIgnored(#{tweet.id})')
+    ul.media-list
+      for tweet in tweets
+        li.media
+          a.pull-left(href='#')
+            - var image = tweet.user.profile_image_url.replace('_normal', '');
+            img.media-object(src='#{image}', style='width: 64px; height: 64px;')
+          .media-body
+            strong.media-heading #{tweet.user.name}
+            span.text-muted  @#{tweet.user.screen_name}
+            p= tweet.text
+            input(type='button', value='Ignore', onclick='markIgnored(#{tweet.id})')
+            input(type='button', value='Consume', onclick='markConsumed(#{tweet.id})')
+
+  div(style='float: left; width: 50%;')
+    .lead Relevant Tweets
+
+    ul.media-list
+      for tweetq in relevantTweets
+        li.media
+          a.pull-left(href='#')
+            - var image = tweetq.user.profile_image_url.replace('_normal', '');
+            img.media-object(src='#{image}', style='width: 64px; height: 64px;')
+          .media-body
+            strong.media-heading #{tweetq.user.name}
+            span.text-muted  @#{tweetq.user.screen_name}
+            p= tweetq.text
+

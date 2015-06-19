@@ -143,6 +143,88 @@ router.get('/', function(req, res) {
     res.json({ message: 'Welcome to our api!' });   
 });
 
+var TweetModel = require('./models/Tweet');
+var UserKeywordModel = require('./models/UserKeyword');
+
+var markIgnored = function(keyword, user) {
+  UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
+    if (err || doc === null) {
+      // we have never seen the keyword for this user yet.
+      // In this case, we assume that the keyword is relevant.
+      var obj = new UserKeywordModel();
+      obj.userId = user._id;
+      obj.keyword = keyword;
+      obj.occurence = 1;
+      obj.ignored = 1;
+      obj.save();
+      return;
+    }
+    doc.occurence += 1;
+    doc.ignored += 1;  
+    doc.save();
+  });
+}
+
+var markConsumed = function(keyword, user) {
+  UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
+    if (err || doc === null) {
+      // we have never seen the keyword for this user yet.
+      // In this case, we assume that the keyword is relevant.
+      var obj = new UserKeywordModel();
+      obj.userId = user._id;
+      obj.keyword = keyword;
+      obj.occurence = 1;
+      obj.ignored = 0;
+      obj.save();
+      return;
+    }
+    doc.occurence += 1;
+    doc.save();
+  });
+}
+
+var markTweetIgnored = function(tweetId, user) {
+  TweetModel.findOne({ tweetId: tweetId }, function (err, doc) {
+    if (err || doc === null) {
+      return;
+    }
+    keywords = doc.keywords;  
+    for (var i = 0; i < keywords.length; i++) {
+      var keyword = keywords[i];
+      markIgnored(keyword, user);
+    }
+  });
+}
+
+var markTweetConsumed = function(tweetId, user) {
+  TweetModel.findOne({ tweetId: tweetId }, function (err, doc) {
+    if (err || doc === null) {
+      return;
+    }
+    keywords = doc.keywords;  
+    for (var i = 0; i < keywords.length; i++) {
+      var keyword = keywords[i];
+      markConsumed(keyword, user);
+    }
+  });
+}
+
+router.route('/tweets/ignore/:tweet_id')
+  .post(function(req, res) {
+    var tweetId = req.params.tweet_id;
+    var user = req.user;
+    markTweetIgnored(tweetId, user);
+    res.json({ message: 'Tweet ignored!' });
+  });
+
+router.route('/tweets/consume/:tweet_id')
+  .post(function(req, res) {
+    var tweetId = req.params.tweet_id;
+    var user = req.user;
+    markTweetConsumed(tweetId, user);
+    res.json({ message: 'Tweet consumed!' });
+  });
+
 router.route('/bears')
     // create a bear (accessed at POST http://localhost:8080/api/v1/bears)
     .post(function(req, res) {
