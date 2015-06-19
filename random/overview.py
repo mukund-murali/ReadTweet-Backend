@@ -1,4 +1,18 @@
 '''
+Problem: 
+
+Use case 1:
+I follow TechCrunch, Mashable, TheVerge. They carry a lot of news. But I may not be interested in all tech news.
+Lets say i dont want to read any news about startups or any news about IBM because i hate IBM.
+I waste time reading tweets about IBM. If it is a lot more things i dont like, I actually waste more time than useful time. 
+
+So, basically taking out unwanted stuff from the tweet timeline. 
+
+Use case 2:
+Since i follow the three channels, They are more likely to report to same news. which also wastes my time. 
+So I should only be shown one best news if multiple channels i follow report the same news. 
+
+
 Flow:
 	1. getNewTweets
 		- gets tweets after a particular timestamp from twitter server. categorizes relevant tweets. 
