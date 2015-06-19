@@ -8,6 +8,7 @@ I waste time reading tweets about IBM. If it is a lot more things i dont like, I
 
 So, basically taking out unwanted stuff from the tweet timeline. 
 
+
 Use case 2:
 Since i follow the three channels, They are more likely to report to same news. which also wastes my time. 
 So I should only be shown one best news if multiple channels i follow report the same news. 

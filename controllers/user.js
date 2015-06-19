@@ -11,7 +11,7 @@ var secrets = require('../config/secrets');
  * Login page.
  */
 exports.getLogin = function(req, res) {
-  if (req.user) return res.redirect('/');
+  if (req.user) return res.redirect('/api/twitter');
   res.render('account/login', {
     title: 'Login'
   });

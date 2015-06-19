@@ -1,6 +1,12 @@
 extends ../layout
 
 block content
+
+  script(type='text/javascript').
+    markIgnored = function(tweetId) {
+      alert(tweetId);
+    };
+
   .page-header
     h2
       i.fa.fa-twitter(style='color: #4099ff')
@@ -32,13 +38,7 @@ block content
 
   br
 
-  .lead Latest
-    strong  #{tweets.length}
-    |  Tweets containing the term
-    strong  nodejs
-    |  in NYC within
-    strong  5
-    |  miles radius
+  .lead Timeline
 
   ul.media-list
     for tweet in tweets
@@ -50,3 +50,4 @@ block content
           strong.media-heading #{tweet.user.name}
           span.text-muted  @#{tweet.user.screen_name}
           p= tweet.text
+          input(type='button', value='Ignore', onclick='markIgnored(#{tweet.id})')

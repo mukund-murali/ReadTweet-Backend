@@ -77,11 +77,11 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(flash());
-app.use(lusca({
-  csrf: true,
-  xframe: 'SAMEORIGIN',
-  xssProtection: true
-}));
+// app.use(lusca({
+//   csrf: true,
+//   xframe: 'SAMEORIGIN',
+//   xssProtection: true
+// }));
 app.use(function(req, res, next) {
   res.locals.user = req.user;
   next();
@@ -113,9 +113,6 @@ app.post('/account/password', passportConf.isAuthenticated, userController.postU
 app.post('/account/delete', passportConf.isAuthenticated, userController.postDeleteAccount);
 app.get('/account/unlink/:provider', passportConf.isAuthenticated, userController.getOauthUnlink);
 
-/**
- * API examples routes.
- */
 app.get('/api', apiController.getApi);
 app.get('/api/scraping', apiController.getScraping);
 app.get('/api/twitter', passportConf.isAuthenticated, passportConf.isAuthorized, apiController.getTwitter);
@@ -128,6 +125,90 @@ app.get('/auth/twitter', passport.authenticate('twitter'));
 app.get('/auth/twitter/callback', passport.authenticate('twitter', { failureRedirect: '/login' }), function(req, res) {
   res.redirect(req.session.returnTo || '/');
 });
+
+/**
+ * My API
+ */
+var router = express.Router();
+
+var Bear = require('./models/bear');
+
+// middleware to use for all requests
+router.use(function(req, res, next) {
+    console.log('Something is happening.');
+    next(); // make sure we go to the next routes and don't stop here
+});
+
+router.get('/', function(req, res) {
+    res.json({ message: 'Welcome to our api!' });   
+});
+
+router.route('/bears')
+    // create a bear (accessed at POST http://localhost:8080/api/v1/bears)
+    .post(function(req, res) {
+        var bear = new Bear();
+        bear.name = req.body.name;
+        bear.save(function(err) {
+            if (err)
+                res.send(err);
+            res.json({ message: 'Bear created!' });
+        })
+      })
+      // get all the bears (accessed at GET http://localhost:8080/api/v1/bears)
+      .get(function(req, res) {
+          Bear.find(function(err, bears) {
+              if (err)
+                  res.send(err);
+              res.json(bears);
+          });
+      });
+
+router.route('/bears/:bear_id')
+
+    // get the bear with that id (accessed at GET http://localhost:8080/api/bears/:bear_id)
+    .get(function(req, res) {
+        Bear.findById(req.params.bear_id, function(err, bear) {
+            if (err)
+                res.send(err);
+            res.json(bear);
+        });
+    })
+    // update the bear with this id (accessed at PUT http://localhost:8080/api/bears/:bear_id)
+    .put(function(req, res) {
+
+        // use our bear model to find the bear we want
+        Bear.findById(req.params.bear_id, function(err, bear) {
+
+            if (err)
+                res.send(err);
+
+            bear.name = req.body.name;  // update the bears info
+
+            // save the bear
+            bear.save(function(err) {
+                if (err)
+                    res.send(err);
+
+                res.json({ message: 'Bear updated!' });
+            });
+
+        });
+    })
+    // delete the bear with this id (accessed at DELETE http://localhost:8080/api/bears/:bear_id)
+    .delete(function(req, res) {
+        Bear.remove({
+            _id: req.params.bear_id
+        }, function(err, bear) {
+            if (err)
+                res.send(err);
+
+            res.json({ message: 'Successfully deleted' });
+        });
+    });
+
+app.use('/api/v1', router);
+
+// END of My API
 
 /**
  * Error Handler.
