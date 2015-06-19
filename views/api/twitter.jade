@@ -7,14 +7,14 @@ block content
     markIgnored = function(tweetId) {
       var url = BASE_URL + 'ignore/' + tweetId;
       $.post(url, function(data) {
-        alert(data);
+        alert("keywords marked useless: \n" + data.keywords);
       });
     };
     markConsumed = function(tweetId) {
       var url = BASE_URL + 'consume/' + tweetId;
       // post to the above URL
       $.post(url, function(data) {
-        alert(data);
+        alert("keywords marked important: \n" + data.keywords);
       });
     }
 

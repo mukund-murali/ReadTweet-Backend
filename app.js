@@ -183,7 +183,7 @@ var markConsumed = function(keyword, user) {
   });
 }
 
-var markTweetIgnored = function(tweetId, user) {
+var markTweetIgnored = function(tweetId, user, res) {
   TweetModel.findOne({ tweetId: tweetId }, function (err, doc) {
     if (err || doc === null) {
       return;
@@ -193,10 +193,11 @@ var markTweetIgnored = function(tweetId, user) {
       var keyword = keywords[i];
       markIgnored(keyword, user);
     }
+    res.json({ keywords: keywords });
   });
 }
 
-var markTweetConsumed = function(tweetId, user) {
+var markTweetConsumed = function(tweetId, user, res) {
   TweetModel.findOne({ tweetId: tweetId }, function (err, doc) {
     if (err || doc === null) {
       return;
@@ -206,23 +207,22 @@ var markTweetConsumed = function(tweetId, user) {
       var keyword = keywords[i];
       markConsumed(keyword, user);
     }
+    res.json({ keywords: keywords });
   });
-}
+};
 
 router.route('/tweets/ignore/:tweet_id')
   .post(function(req, res) {
     var tweetId = req.params.tweet_id;
     var user = req.user;
-    markTweetIgnored(tweetId, user);
-    res.json({ message: 'Tweet ignored!' });
+    markTweetIgnored(tweetId, user, res);
   });
 
 router.route('/tweets/consume/:tweet_id')
   .post(function(req, res) {
     var tweetId = req.params.tweet_id;
     var user = req.user;
-    markTweetConsumed(tweetId, user);
-    res.json({ message: 'Tweet consumed!' });
+    markTweetConsumed(tweetId, user, res);
   });
 
 router.route('/bears')
