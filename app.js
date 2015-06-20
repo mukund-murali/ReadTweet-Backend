@@ -131,8 +131,7 @@ app.get('/auth/twitter/callback', passport.authenticate('twitter', { failureRedi
  */
 var router = express.Router();
 
-var Bear = require('./models/bear');
-
+// TODO Make a middleware like this for all api calls
 // middleware to use for all requests
 router.use(function(req, res, next) {
     console.log('Something is happening.');
@@ -146,147 +145,62 @@ router.get('/', function(req, res) {
 var TweetModel = require('./models/Tweet');
 var UserKeywordModel = require('./models/UserKeyword');
 
-var markIgnored = function(keyword, user) {
-  UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
-    if (err || doc === null) {
-      // we have never seen the keyword for this user yet.
-      // In this case, we assume that the keyword is relevant.
-      var obj = new UserKeywordModel();
-      obj.userId = user._id;
-      obj.keyword = keyword;
-      obj.occurence = 1;
-      obj.ignored = 1;
-      obj.save();
-      return;
-    }
-    doc.occurence += 1;
-    doc.ignored += 1;  
-    doc.save();
-  });
-}
-
-var markConsumed = function(keyword, user) {
-  UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
-    if (err || doc === null) {
-      // we have never seen the keyword for this user yet.
-      // In this case, we assume that the keyword is relevant.
-      var obj = new UserKeywordModel();
-      obj.userId = user._id;
-      obj.keyword = keyword;
-      obj.occurence = 1;
-      obj.ignored = 0;
-      obj.save();
-      return;
-    }
-    doc.occurence += 1;
-    doc.save();
-  });
-}
-
-var markTweetIgnored = function(tweetId, user, res) {
-  TweetModel.findOne({ tweetId: tweetId }, function (err, doc) {
-    if (err || doc === null) {
-      return;
-    }
-    keywords = doc.keywords;  
-    for (var i = 0; i < keywords.length; i++) {
-      var keyword = keywords[i];
-      markIgnored(keyword, user);
-    }
-    res.json({ keywords: keywords });
-  });
-}
-
-var markTweetConsumed = function(tweetId, user, res) {
-  TweetModel.findOne({ tweetId: tweetId }, function (err, doc) {
-    if (err || doc === null) {
-      return;
-    }
-    keywords = doc.keywords;  
-    for (var i = 0; i < keywords.length; i++) {
-      var keyword = keywords[i];
-      markConsumed(keyword, user);
-    }
-    res.json({ keywords: keywords });
-  });
-};
+var twitterUtils = require('./utils/twitterUtils');
 
 router.route('/tweets/ignore/:tweet_id')
   .post(function(req, res) {
     var tweetId = req.params.tweet_id;
     var user = req.user;
-    markTweetIgnored(tweetId, user, res);
+    // this condition has to used in all calls requiring user.
+    // better put this into a middleware
+    if (user === undefined) {
+      res.json({'message': 'errorUserDoesNotExist'});
+    }
+    twitterUtils.markTweetIgnored(tweetId, user, res);
   });
 
 router.route('/tweets/consume/:tweet_id')
   .post(function(req, res) {
     var tweetId = req.params.tweet_id;
     var user = req.user;
-    markTweetConsumed(tweetId, user, res);
+    twitterUtils.markTweetConsumed(tweetId, user, res);
   });
 
-router.route('/bears')
-    // create a bear (accessed at POST http://localhost:8080/api/v1/bears)
-    .post(function(req, res) {
-        var bear = new Bear();
-        bear.name = req.body.name;
-        bear.save(function(err) {
-            if (err)
-                res.send(err);
-            res.json({ message: 'Bear created!' });
-        })
-      })
-      // get all the bears (accessed at GET http://localhost:8080/api/v1/bears)
-      .get(function(req, res) {
-          Bear.find(function(err, bears) {
-              if (err)
-                  res.send(err);
-              res.json(bears);
-          });
+router.route('/login/')
+  .post(function(req, res) {
+    var userId = req.body.user_id;
+    var username = req.body.username;
+    var authToken = req.body.auth_token;
+    var authTokenSecret = req.body.auth_token_secret;
+
+    var User = require('./models/User');
+
+    User.findOne({ twitter: userId }, function(err, existingUser) {
+      if (existingUser) {
+        res.json({ 'message': 'existingUser' });
+        return;
+      }
+      var user = new User();
+      // Twitter will not provide an email address.  Period.
+      // But a person’s twitter username is guaranteed to be unique
+      // so we can "fake" a twitter email address as follows:
+      user.email = username + "@twitter.com";
+      user.twitter = userId;
+      user.tokens.push({ kind: 'twitter', accessToken: authToken, tokenSecret: authTokenSecret });
+      // user.profile.name = "Mukund";
+      // user.profile.location = profile._json.location;
+      // user.profile.picture = profile._json.profile_image_url_https;
+      user.save(function(err) {
+        if (err) {
+          res.send(err);
+          return;
+        } else {
+          res.json({ 'message': 'success' });
+        }
       });
-
-router.route('/bears/:bear_id')
-
-    // get the bear with that id (accessed at GET http://localhost:8080/api/bears/:bear_id)
-    .get(function(req, res) {
-        Bear.findById(req.params.bear_id, function(err, bear) {
-            if (err)
-                res.send(err);
-            res.json(bear);
-        });
-    })
-    // update the bear with this id (accessed at PUT http://localhost:8080/api/bears/:bear_id)
-    .put(function(req, res) {
-
-        // use our bear model to find the bear we want
-        Bear.findById(req.params.bear_id, function(err, bear) {
-
-            if (err)
-                res.send(err);
-
-            bear.name = req.body.name;  // update the bears info
-
-            // save the bear
-            bear.save(function(err) {
-                if (err)
-                    res.send(err);
-
-                res.json({ message: 'Bear updated!' });
-            });
-
-        });
-    })
-    // delete the bear with this id (accessed at DELETE http://localhost:8080/api/bears/:bear_id)
-    .delete(function(req, res) {
-        Bear.remove({
-            _id: req.params.bear_id
-        }, function(err, bear) {
-            if (err)
-                res.send(err);
-
-            res.json({ message: 'Successfully deleted' });
-        });
     });
+  })
+;
 
 app.use('/api/v1', router);
 
