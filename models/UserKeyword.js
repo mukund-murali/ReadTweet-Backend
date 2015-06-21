@@ -8,7 +8,9 @@ var UserKeywordSchema = new Schema({
     },
     keyword: String,
     occurence: Number,
-    ignored: Number
+    ignored: Number,
+    skipped: Number,
+    interested: Number
 });
 
 module.exports = mongoose.model('UserKeyword', UserKeywordSchema);

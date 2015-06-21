@@ -29,6 +29,7 @@ var homeController = require('./controllers/home');
 var userController = require('./controllers/user');
 var apiController = require('./controllers/api');
 var contactController = require('./controllers/contact');
+var twitterController = require('./controllers/twitter');
 
 /**
  * API keys and Passport configuration.
@@ -117,6 +118,7 @@ app.get('/api', apiController.getApi);
 app.get('/api/scraping', apiController.getScraping);
 app.get('/api/twitter', passportConf.isAuthenticated, passportConf.isAuthorized, apiController.getTwitter);
 app.post('/api/twitter', passportConf.isAuthenticated, passportConf.isAuthorized, apiController.postTwitter);
+app.get('/keywords', twitterController.getKeywords);
 
 /**
  * OAuth authentication routes. (Sign in)

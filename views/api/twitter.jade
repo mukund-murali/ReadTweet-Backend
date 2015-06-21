@@ -32,7 +32,10 @@ block content
   br
 
   div(style='float: left; width: 50%;')
-    .lead All Tweets
+    .lead
+      | All Tweets - 
+      a(href='/keywords', target='_blank')
+        | Knowledge base
 
     ul.media-list
       for tweet in tweets

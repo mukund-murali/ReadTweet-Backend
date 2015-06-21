@@ -1,0 +1,33 @@
+extends layout
+
+block content
+
+  table(style='width:100%')
+    tr
+      th
+        | Keyword
+      th
+        | Relevance
+      th
+        | Occurence
+      th
+        | Ignored
+      th
+        | Skipped
+      th
+        | Interested
+
+    for userKeyword in userKeywords
+        tr
+          td
+            | #{userKeyword.keyword}
+          td
+            | #{userKeyword.relevance}
+          td
+            | #{userKeyword.occurence}
+          td
+            | #{userKeyword.ignored}
+          td
+            | #{userKeyword.skipped}
+          td
+            | #{userKeyword.interested}

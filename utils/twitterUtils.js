@@ -20,9 +20,7 @@ var getTweetString = function(tweet) {
 
 var getWordRelevance = function(obj) {
   var relevance = (obj.occurence - obj.ignored) / obj.occurence;
-  console.log("word rel:", obj, relevance);
-  return relevance
-  ;
+  return relevance;
 };
 
 var isRelevantKeyword = function(keyword, user, callback) {
@@ -218,6 +216,13 @@ exports.getRelevantTweets = function(tweets, user, callback) {
       allTweets.push(relevantTweet);
       timesRun++;
       if (timesRun >= timesToRun) {
+        // sorting tweets by ID
+        allTweets.sort(function(a, b) {
+            return a.id - b.id;
+        });
+        relevantTweets.sort(function(a, b) {
+            return a.id - b.id;
+        });
         callback(relevantTweets, allTweets);
         return;
       }
@@ -290,3 +295,19 @@ exports.markTweetConsumed = function(tweetId, user, res) {
     res.json({ keywords: keywords });
   });
 };
+
+exports.getUserKeywords = function(user, callback) {
+  UserKeywordModel.find({userId: user._id}, function(err, docs) {
+    if (!err && docs != null) {
+      for (var i = 0; i < docs.length; i++) {
+        var doc = docs[i];
+        doc.relevance = getWordRelevance(doc);
+      }
+      docs.sort(function(a, b) {
+          return b.relevance - a.relevance;
+      });
+    }
+    callback(err, docs);
+  });
+};
+
