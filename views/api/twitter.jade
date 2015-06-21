@@ -14,9 +14,16 @@ block content
       var url = BASE_URL + 'consume/' + tweetId;
       // post to the above URL
       $.post(url, function(data) {
+        alert("keywords marked skipped: \n" + data.keywords);
+      });
+    };
+    markInterested = function(tweetId) {
+      var url = BASE_URL + 'interested/' + tweetId;
+      // post to the above URL
+      $.post(url, function(data) {
         alert("keywords marked important: \n" + data.keywords);
       });
-    }
+    };
 
   .well
     h4 Compose new Tweet
@@ -31,40 +38,25 @@ block content
 
   br
 
-  div(style='float: left; width: 50%;')
-    .lead
-      | All Tweets - 
-      a(href='/keywords', target='_blank')
-        | Knowledge base
+  .lead
+    | All Tweets - 
+    a(href='/keywords', target='_blank')
+      | Knowledge base
 
-    ul.media-list
-      for tweet in tweets
-        li.media
-          a.pull-left(href='#')
-            - var image = tweet.user.profile_image_url.replace('_normal', '');
-            img.media-object(src='#{image}', style='width: 64px; height: 64px;')
-          .media-body
-            strong.media-heading #{tweet.user.name}
-            span.text-muted  @#{tweet.user.screen_name} - 
-            if tweet.isRelevant
-              i.fa.fa-check
-            else
-              i.fa.fa-times
-            p= tweet.text
-            input(type='button', value='Interesting', onclick='markConsumed(#{tweet.id})')
-            input(type='button', value='I dont care', onclick='markIgnored(#{tweet.id})')
-
-  div(style='float: left; width: 50%;')
-    .lead Relevant Tweets
-
-    ul.media-list
-      for tweetq in relevantTweets
-        li.media
-          a.pull-left(href='#')
-            - var image = tweetq.user.profile_image_url.replace('_normal', '');
-            img.media-object(src='#{image}', style='width: 64px; height: 64px;')
-          .media-body
-            strong.media-heading #{tweetq.user.name}
-            span.text-muted  @#{tweetq.user.screen_name}
-            p= tweetq.text
-
+  ul.media-list
+    for tweet in tweets
+      li.media
+        a.pull-left(href='#')
+          - var image = tweet.user.profile_image_url.replace('_normal', '');
+          img.media-object(src='#{image}', style='width: 64px; height: 64px;')
+        .media-body
+          strong.media-heading #{tweet.user.name}
+          span.text-muted  @#{tweet.user.screen_name} - 
+          if tweet.isRelevant
+            i.fa.fa-check
+          else
+            i.fa.fa-times
+          p= tweet.text
+          input(type='button', value='Interesting', onclick='markInterested(#{tweet.id})')
+          input(type='button', value='Not Important', onclick='markConsumed(#{tweet.id})')
+          input(type='button', value='I dont care', onclick='markIgnored(#{tweet.id})')

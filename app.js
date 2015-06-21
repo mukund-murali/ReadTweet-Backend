@@ -168,6 +168,14 @@ router.route('/tweets/consume/:tweet_id')
     twitterUtils.markTweetConsumed(tweetId, user, res);
   });
 
+router.route('/tweets/interested/:tweet_id')
+  .post(function(req, res) {
+    var tweetId = req.params.tweet_id;
+    var user = req.user;
+    twitterUtils.markTweetInterested(tweetId, user, res);
+  });
+
+
 router.route('/login/')
   .post(function(req, res) {
     var userId = req.body.user_id;
