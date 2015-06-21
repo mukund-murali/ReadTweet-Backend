@@ -50,7 +50,15 @@ exports.getTwitter = function(req, res, next) {
     access_token: token.accessToken,
     access_token_secret: token.tokenSecret
   });
-  T.get('statuses/home_timeline', {'count': 20}, function(err, reply) {
+  var params = {
+    'count': 100,
+  };
+  var maxTweetId = req.user.maxTweetIdSeen;
+  if (!(maxTweetId === undefined)) {
+    // This is not needed for web. Needed for android though.
+    // params['since_id'] = maxTweetId;
+  }
+  T.get('statuses/home_timeline', params, function(err, reply) {
     if (err) return next(err);
     allTweets = reply;
     twitterUtils.getRelevantTweets(allTweets, req.user, function(relevantTweets, allTweets) {

@@ -56,6 +56,7 @@ block content
             i.fa.fa-check
           else
             i.fa.fa-times
+          span.text-muted #{tweet.created_at}
           p= tweet.text
           input(type='button', value='Interesting', onclick='markInterested(#{tweet.id})')
           input(type='button', value='Not Important', onclick='markConsumed(#{tweet.id})')

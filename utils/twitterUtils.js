@@ -19,6 +19,8 @@ var getTweetString = function(tweet) {
 };
 
 var getWordRelevance = function(obj) {
+  var interested = obj.interested === undefined ? 0 : obj.interested;
+  var skipped = obj.skipped === undefined ? 0 : obj.skipped;
   var relevance = (obj.occurence - obj.ignored) / obj.occurence;
   return relevance;
 };
@@ -221,11 +223,13 @@ exports.getRelevantTweets = function(tweets, user, callback) {
       if (timesRun >= timesToRun) {
         // sorting tweets by ID
         allTweets.sort(function(a, b) {
-            return a.id - b.id;
+            return b.id - a.id;
         });
         relevantTweets.sort(function(a, b) {
-            return a.id - b.id;
+            return b.id - a.id;
         });
+        user.maxTweetIdSeen = getTweetId(allTweets[0]);
+        user.save();
         callback(relevantTweets, allTweets);
         return;
       }
@@ -334,4 +338,3 @@ exports.getUserKeywords = function(user, callback) {
     callback(err, docs);
   });
 };
-

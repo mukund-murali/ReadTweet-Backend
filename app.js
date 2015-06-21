@@ -175,6 +175,7 @@ router.route('/tweets/interested/:tweet_id')
     twitterUtils.markTweetInterested(tweetId, user, res);
   });
 
+var userManagementUtils = require('./utils/userManagement');
 
 router.route('/login/')
   .post(function(req, res) {
@@ -182,33 +183,7 @@ router.route('/login/')
     var username = req.body.username;
     var authToken = req.body.auth_token;
     var authTokenSecret = req.body.auth_token_secret;
-
-    var User = require('./models/User');
-
-    User.findOne({ twitter: userId }, function(err, existingUser) {
-      if (existingUser) {
-        res.json({ 'message': 'existingUser' });
-        return;
-      }
-      var user = new User();
-      // Twitter will not provide an email address.  Period.
-      // But a person’s twitter username is guaranteed to be unique
-      // so we can "fake" a twitter email address as follows:
-      user.email = username + "@twitter.com";
-      user.twitter = userId;
-      user.tokens.push({ kind: 'twitter', accessToken: authToken, tokenSecret: authTokenSecret });
-      // user.profile.name = "Mukund";
-      // user.profile.location = profile._json.location;
-      // user.profile.picture = profile._json.profile_image_url_https;
-      user.save(function(err) {
-        if (err) {
-          res.send(err);
-          return;
-        } else {
-          res.json({ 'message': 'success' });
-        }
-      });
-    });
+    userManagementUtils.login(userId, username, authToken, authTokenSecret, req, res);
   })
 ;
 
