@@ -123,6 +123,10 @@ var findKeywords = function(tweet, callback) {
     body = JSON.parse(body);
     var keywords = [];
     var keywordResponse = body.keywords;
+    if (keywordResponse === undefined) {
+      callback(keywords);
+      return;
+    }
     for (var i = 0; i < keywordResponse.length; i++) {
         keywords.push(keywordResponse[i].text);
     }
@@ -183,7 +187,6 @@ var isRelevantTweet = function(tweet, user, callback) {
     }
     getNoRelevantKeywords(keywords, user, function(noRelevantKeywords) {
       var tweetRelevance = getTweetRelevance(noRelevantKeywords, keywords.length);
-      console.log(getTweetString(tweet), tweetRelevance, noRelevantKeywords, keywords.length);
       if (tweetRelevance >= THRESHOLD_FOR_TWEET_RELEVANCE) {
         callback(true, tweet);
       } else {
