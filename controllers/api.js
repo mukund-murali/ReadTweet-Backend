@@ -43,30 +43,13 @@ var twitterUtils = require('../utils/twitterUtils');
  * Twiter API example.
  */
 exports.getTwitter = function(req, res, next) {
-  var token = _.find(req.user.tokens, { kind: 'twitter' });
-  var T = new Twit({
-    consumer_key: secrets.twitter.consumerKey,
-    consumer_secret: secrets.twitter.consumerSecret,
-    access_token: token.accessToken,
-    access_token_secret: token.tokenSecret
-  });
-  var params = {
-    'count': 100,
-  };
-  var maxTweetId = req.user.maxTweetIdSeen;
-  if (!(maxTweetId === undefined)) {
-    // This is not needed for web. Needed for android though.
-    // params['since_id'] = maxTweetId;
-  }
-  T.get('statuses/home_timeline', params, function(err, reply) {
+  var sinceId = undefined;
+  twitterUtils.getRelevantTweetsFromTwitter(req.user, sinceId, function(err, relevantTweets, allTweets) {
     if (err) return next(err);
-    allTweets = reply;
-    twitterUtils.getRelevantTweets(allTweets, req.user, function(relevantTweets, allTweets) {
-      res.render('api/twitter', {
-        title: 'Tweets',
-        tweets: allTweets,
-        relevantTweets: relevantTweets
-      });
+    res.render('api/twitter', {
+      title: 'Tweets',
+      tweets: allTweets,
+      relevantTweets: relevantTweets
     });
   });
 };

@@ -146,8 +146,30 @@ router.get('/', function(req, res) {
 
 var TweetModel = require('./models/Tweet');
 var UserKeywordModel = require('./models/UserKeyword');
+var User = require('./models/User');
 
 var twitterUtils = require('./utils/twitterUtils');
+
+router.route('/tweets')
+  .get(function(req, res) {
+    var deviceId = req.query.device_id;
+    var twitterUserId = req.query.user_id;
+    var sinceTweetId = req.query.since_tweet_id;
+    User.findOne({twitter: twitterUserId}, function(err, existingUser) {
+      if (err) {
+        res.send(err);
+        return;
+      }
+      twitterUtils.getRelevantTweetsFromTwitter(existingUser, sinceTweetId, function(err, relevantTweets, allTweets) {
+        if (err) return res.send(err);
+        var respJSON = {
+          tweets: allTweets,
+          relevantTweets: relevantTweets
+        };
+        res.json(respJSON);
+      });
+    });
+  });
 
 router.route('/tweets/ignore/:tweet_id')
   .post(function(req, res) {
@@ -184,8 +206,7 @@ router.route('/login/')
     var authToken = req.body.auth_token;
     var authTokenSecret = req.body.auth_token_secret;
     userManagementUtils.login(userId, username, authToken, authTokenSecret, req, res);
-  })
-;
+  });
 
 app.use('/api/v1', router);
 

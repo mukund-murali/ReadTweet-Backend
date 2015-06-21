@@ -1,9 +1,12 @@
 var request = require('request');
+var secrets = require('../config/secrets');
+var Twit = require('twit');
 
 var TweetModel = require('../models/Tweet');
 var UserKeywordModel = require('../models/UserKeyword');
 
 var _this = this;
+var _ = require('lodash');
 
 THRESHOLD_FOR_WORD_RELEVANCE = 0.5
 THRESHOLD_FOR_TWEET_RELEVANCE = 0.5
@@ -187,6 +190,11 @@ var isRelevantTweet = function(tweet, user, callback) {
       callback(false, tweet);
       return;
     }
+    // if there are no keywords, assume the tweet to be relevant
+    if (keywords.length === 0) {
+      callback(true, tweet);
+      return;
+    }
     getNoRelevantKeywords(keywords, user, function(noRelevantKeywords) {
       var tweetRelevance = getTweetRelevance(noRelevantKeywords, keywords.length);
       if (tweetRelevance >= THRESHOLD_FOR_TWEET_RELEVANCE) {
@@ -205,7 +213,7 @@ exports.getRelevantTweets = function(tweets, user, callback) {
   var relevantTweets = [];
   var timesToRun = tweets.length;
   if (timesToRun == 0) {
-    callback(relevantTweets, tweets);
+    callback(null, relevantTweets, tweets);
     return;
   }
   var timesRun = 0;
@@ -230,11 +238,32 @@ exports.getRelevantTweets = function(tweets, user, callback) {
         });
         user.maxTweetIdSeen = getTweetId(allTweets[0]);
         user.save();
-        callback(relevantTweets, allTweets);
+        callback(null, relevantTweets, allTweets);
         return;
       }
     });
   }
+};
+
+exports.getRelevantTweetsFromTwitter = function(user, sinceId, callback) {
+  var token = _.find(user.tokens, { kind: 'twitter' });
+  var T = new Twit({
+    consumer_key: secrets.twitter.consumerKey,
+    consumer_secret: secrets.twitter.consumerSecret,
+    access_token: token.accessToken,
+    access_token_secret: token.tokenSecret
+  });
+  var params = {
+    'count': 10,
+  };
+  if (sinceId) {
+    params['since_id'] = sinceId;
+  }
+  T.get('statuses/home_timeline', params, function(err, reply) {
+    if (err) return callback(err);
+    allTweets = reply;
+    _this.getRelevantTweets(allTweets, user, callback);
+  });
 };
 
 var getNewUserKeyword = function(keyword, user) {

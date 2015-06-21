@@ -14,7 +14,7 @@ var getNewUserDeviceModel = function(userId) {
 exports.login = function(userId, username, authToken, authTokenSecret, req, res) {
   User.findOne({twitter: userId}, function(err, existingUser) {
     if (existingUser) {
-      var userDevice = getNewUserDeviceModel(userId);
+      var userDevice = getNewUserDeviceModel(existingUser._id);
       res.json({'message': 'existingUser', 'deviceId': userDevice.deviceId});
       return;
     }
