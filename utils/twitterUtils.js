@@ -254,7 +254,7 @@ exports.getRelevantTweetsFromTwitter = function(user, sinceId, callback) {
     access_token_secret: token.tokenSecret
   });
   var params = {
-    'count': 10,
+    'count': 6,
   };
   if (sinceId) {
     params['since_id'] = sinceId;

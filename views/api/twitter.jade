@@ -3,7 +3,7 @@ extends ../layout
 block content
 
   script(type='text/javascript').
-    BASE_URL = '/api/v1/tweets/';
+    BASE_URL = '/api/v2/tweets/';
     markIgnored = function(tweetId) {
       var url = BASE_URL + 'ignore/' + tweetId;
       $.post(url, function(data) {

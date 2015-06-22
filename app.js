@@ -131,17 +131,23 @@ app.get('/auth/twitter/callback', passport.authenticate('twitter', { failureRedi
 /**
  * My API
  */
-var router = express.Router();
+var signedInRouter = express.Router();
 
-// TODO Make a middleware like this for all api calls
-// middleware to use for all requests
-router.use(function(req, res, next) {
-    console.log('Something is happening.');
-    next(); // make sure we go to the next routes and don't stop here
-});
-
-router.get('/', function(req, res) {
-    res.json({ message: 'Welcome to our api!' });   
+signedInRouter.use(function(req, res, next) {
+    console.log('SignedInMiddleware');
+    if (!req.user) {
+      // call is from a device. populate this value from the params sent.
+      User.findOne({twitter: req.query.user_id}, function(err, existingUser) {
+        if (err || existingUser == null) {
+          res.status(403).send({reason: 'notSignedIn'});
+          return;
+        }
+        req.user = existingUser;
+        next();
+      });
+    } else {
+      next();
+    }
 });
 
 var TweetModel = require('./models/Tweet');
@@ -150,55 +156,48 @@ var User = require('./models/User');
 
 var twitterUtils = require('./utils/twitterUtils');
 
-router.route('/tweets')
+signedInRouter.route('/tweets')
   .get(function(req, res) {
     var deviceId = req.query.device_id;
     var twitterUserId = req.query.user_id;
     var sinceTweetId = req.query.since_tweet_id;
-    User.findOne({twitter: twitterUserId}, function(err, existingUser) {
-      if (err) {
-        res.send(err);
-        return;
-      }
-      twitterUtils.getRelevantTweetsFromTwitter(existingUser, sinceTweetId, function(err, relevantTweets, allTweets) {
-        if (err) return res.send(err);
-        var respJSON = {
-          tweets: allTweets,
-          relevantTweets: relevantTweets
-        };
-        res.json(respJSON);
-      });
+    var user = req.user;
+  
+    twitterUtils.getRelevantTweetsFromTwitter(user, sinceTweetId, function(err, relevantTweets, allTweets) {
+      if (err) return res.send(err);
+      var respJSON = {
+        tweets: allTweets,
+        relevantTweets: relevantTweets
+      };
+      res.json(respJSON);
     });
   });
 
-router.route('/tweets/ignore/:tweet_id')
+signedInRouter.route('/tweets/ignore/:tweet_id')
   .post(function(req, res) {
     var tweetId = req.params.tweet_id;
     var user = req.user;
-    // this condition has to used in all calls requiring user.
-    // better put this into a middleware
-    if (user === undefined) {
-      res.json({'message': 'errorUserDoesNotExist'});
-    }
     twitterUtils.markTweetIgnored(tweetId, user, res);
   });
 
-router.route('/tweets/consume/:tweet_id')
+signedInRouter.route('/tweets/consume/:tweet_id')
   .post(function(req, res) {
     var tweetId = req.params.tweet_id;
     var user = req.user;
     twitterUtils.markTweetConsumed(tweetId, user, res);
   });
 
-router.route('/tweets/interested/:tweet_id')
+signedInRouter.route('/tweets/interested/:tweet_id')
   .post(function(req, res) {
     var tweetId = req.params.tweet_id;
     var user = req.user;
     twitterUtils.markTweetInterested(tweetId, user, res);
   });
 
+
 var userManagementUtils = require('./utils/userManagement');
 
+var router = express.Router();
 router.route('/login/')
   .post(function(req, res) {
     var userId = req.body.user_id;
@@ -207,8 +206,8 @@ router.route('/login/')
     var authTokenSecret = req.body.auth_token_secret;
     userManagementUtils.login(userId, username, authToken, authTokenSecret, req, res);
   });
-
 app.use('/api/v1', router);
+app.use('/api/v2', signedInRouter);
 
 // END of My API
 
