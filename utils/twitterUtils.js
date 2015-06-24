@@ -220,6 +220,9 @@ exports.getRelevantTweets = function(tweets, user, callback) {
   var allTweets = []
   for (var i = 0; i < timesToRun; i++) {
     var tweet = tweets[i];
+    // NOTE: http://www.apaxsoftware.com/2012/05/common-javascript-mistakes-loops-and-callbacks/
+    // This can be solved using the above solution. 
+    // passing relevantTweet from the function as callback is not needed.
     isRelevantTweet(tweet, user, function(isRelevant, relevantTweet) {
       relevantTweet.isRelevant = false;
       if (isRelevant) {
@@ -259,6 +262,7 @@ exports.getRelevantTweetsFromTwitter = function(user, sinceId, callback) {
   if (sinceId) {
     params['since_id'] = sinceId;
   }
+  console.log(params);
   T.get('statuses/home_timeline', params, function(err, reply) {
     if (err) return callback(err);
     allTweets = reply;
@@ -388,24 +392,20 @@ exports.syncTweets = function(user, tweets, callback) {
       keywords = doc.keywords;  
       for (var i = 0; i < keywords.length; i++) {
         var keyword = getFixedKeyword(keywords[i]);
-        UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
-          if (err || doc === null) {
-            if (keyword === "U.S") {
-              console.log("creating new model 1"); 
-              console.log(err, doc);
+        // http://www.apaxsoftware.com/2012/05/common-javascript-mistakes-loops-and-callbacks/
+        // Reason to use closure
+        (function (keyword) {
+          UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
+            if (err || doc === null) {
+              doc = getNewUserKeyword(keyword, user);
             }
-            doc = getNewUserKeyword(keyword, user);
-          } else {
-            if (keyword === "U.S") {
-              console.log("already exists"); 
-            }
-          }
-          doc.occurence += (ignored + skipped + interested);
-          doc.ignored += ignored;
-          doc.skipped += skipped;
-          doc.interested += interested;
-          doc.save();
-        });
+            doc.occurence += (ignored + skipped + interested);
+            doc.ignored += ignored;
+            doc.skipped += skipped;
+            doc.interested += interested;
+            doc.save();
+          });
+        }(keyword));
       }
     });
   }
