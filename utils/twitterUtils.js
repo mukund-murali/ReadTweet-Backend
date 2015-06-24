@@ -367,3 +367,47 @@ exports.getUserKeywords = function(user, callback) {
     callback(err, docs);
   });
 };
+
+var getFixedKeyword = function(keyword) {
+  return keyword.trim().toLowerCase();
+};
+
+exports.syncTweets = function(user, tweets, callback) {
+  console.log(tweets);
+  for (var i = 0; i < tweets.length; i++) {
+    var tweetInfo = tweets[i];
+    var tweetId = tweetInfo['tweetId'];
+    var skipped = tweetInfo['skipped'];
+    var interested = tweetInfo['interested'];
+    var ignored = tweetInfo['ignored'];
+
+    TweetModel.findOne({ tweetId: tweetId }, function (err, doc) {
+      if (err || doc === null) {
+        return;
+      }
+      keywords = doc.keywords;  
+      for (var i = 0; i < keywords.length; i++) {
+        var keyword = getFixedKeyword(keywords[i]);
+        UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
+          if (err || doc === null) {
+            if (keyword === "U.S") {
+              console.log("creating new model 1"); 
+              console.log(err, doc);
+            }
+            doc = getNewUserKeyword(keyword, user);
+          } else {
+            if (keyword === "U.S") {
+              console.log("already exists"); 
+            }
+          }
+          doc.occurence += (ignored + skipped + interested);
+          doc.ignored += ignored;
+          doc.skipped += skipped;
+          doc.interested += interested;
+          doc.save();
+        });
+      }
+    });
+  }
+  callback();
+};

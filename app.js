@@ -158,6 +158,14 @@ var twitterUtils = require('./utils/twitterUtils');
 
 signedInRouter.route('/tweets')
   .get(function(req, res) {
+    var keyword = "u.s";
+    UserKeywordModel.findOne({keyword: keyword, userId: req.user._id}, function(err, doc) {
+      if (err || doc == null) {
+        console.log("no found");
+      } else {
+        console.log("found");
+      }
+    });
     var deviceId = req.query.device_id;
     var twitterUserId = req.query.user_id;
     var sinceTweetId = req.query.since_tweet_id;
@@ -170,6 +178,14 @@ signedInRouter.route('/tweets')
         relevantTweets: relevantTweets
       };
       res.json(respJSON);
+    });
+  });
+
+signedInRouter.route('/sync')
+  .post(function(req, res) {
+    var user = req.user;
+    twitterUtils.syncTweets(user, req.body, function(err) {
+      res.json({message: 'Hello'});
     });
   });
 
