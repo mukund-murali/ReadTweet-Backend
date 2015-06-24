@@ -27,7 +27,12 @@ Flow:
 
 Android database:
 
-tweet_id(primary_key), tweet_JSON, skipped, ignored, interested, is_synced
+tweet_id(primary_key),
+tweet_JSON,
+skipped,
+ignored,
+interested,
+tis_synced
 
 once a row is synced, mark is_synced=0 and set all values to 0.
 Until then, keep incrementing them locally and send them all in one shot. 
