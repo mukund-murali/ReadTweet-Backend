@@ -259,7 +259,7 @@ exports.getRelevantTweetsFromTwitter = function(user, sinceId, callback) {
   var params = {
     'count': 6,
   };
-  if (sinceId) {
+  if (sinceId && sinceId != 0) {
     params['since_id'] = sinceId;
   }
   console.log(params);
