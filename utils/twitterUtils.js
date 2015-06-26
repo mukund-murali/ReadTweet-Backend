@@ -13,7 +13,9 @@ var _ = require('lodash');
 THRESHOLD_FOR_WORD_RELEVANCE = 0.5
 THRESHOLD_FOR_TWEET_RELEVANCE = 0.5
 
-// Helper functions. To move it to a different place
+INTERESTED_FACTOR = 5;
+SKIPPED_FACTOR = -1;
+IGNORED_FACTOR = -4;
 
 var getTweetId = function(tweet) {
   return tweet.id;
@@ -23,17 +25,13 @@ var getTweetString = function(tweet) {
   return tweet.text;
 };
 
-var INTERESTED_FACTOR = 5;
-var SKIPPED_FACTOR = -1;
-var IGNORED_FACTOR = -4;
-
 var getWordRelevance = function(obj) {
   var interested = obj.interested === undefined ? 0 : obj.interested;
   var skipped = obj.skipped === undefined ? 0 : obj.skipped;
   var relevance = (obj.occurence - obj.ignored) / obj.occurence;
-  var newRelevance = (INTERESTED_FACTOR*interested/obj.occurence) + 
-                     (SKIPPED_FACTOR*skipped/obj.occurence) +
-                     (IGNORED_FACTOR*obj.ignored/obj.occurence);
+  var newRelevance = (INTERESTED_FACTOR * interested / obj.occurence) + 
+                     (SKIPPED_FACTOR * skipped / obj.occurence) +
+                     (IGNORED_FACTOR * obj.ignored / obj.occurence);
   // convert range does not work for negative numbers.
   // so converting range from (-4, 5) to (0, 9)
   // and then back to (0, 1) for easy relevance matching.
