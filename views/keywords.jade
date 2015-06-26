@@ -20,14 +20,14 @@ block content
     for userKeyword in userKeywords
         tr
           td
-            | #{userKeyword.keyword}
+            | #{userKeyword.doc.keyword}
           td
             | #{userKeyword.relevance}
           td
-            | #{userKeyword.occurence}
+            | #{userKeyword.doc.occurence}
           td
-            | #{userKeyword.ignored}
+            | #{userKeyword.doc.ignored}
           td
-            | #{userKeyword.skipped}
+            | #{userKeyword.doc.skipped}
           td
-            | #{userKeyword.interested}
+            | #{userKeyword.doc.interested}

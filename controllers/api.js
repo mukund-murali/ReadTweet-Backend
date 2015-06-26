@@ -44,7 +44,8 @@ var twitterUtils = require('../utils/twitterUtils');
  */
 exports.getTwitter = function(req, res, next) {
   var sinceId = undefined;
-  twitterUtils.getRelevantTweetsFromTwitter(req.user, sinceId, function(err, relevantTweets, allTweets) {
+  var maxId = undefined;
+  twitterUtils.getRelevantTweetsFromTwitter(req.user, sinceId, maxId, function(err, relevantTweets, allTweets) {
     if (err) return next(err);
     res.render('api/twitter', {
       title: 'Tweets',

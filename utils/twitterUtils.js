@@ -248,7 +248,7 @@ exports.getRelevantTweets = function(tweets, user, callback) {
   }
 };
 
-exports.getRelevantTweetsFromTwitter = function(user, sinceId, callback) {
+exports.getRelevantTweetsFromTwitter = function(user, sinceId, maxId, callback) {
   var token = _.find(user.tokens, { kind: 'twitter' });
   var T = new Twit({
     consumer_key: secrets.twitter.consumerKey,
@@ -257,10 +257,13 @@ exports.getRelevantTweetsFromTwitter = function(user, sinceId, callback) {
     access_token_secret: token.tokenSecret
   });
   var params = {
-    'count': 6,
+    // 'count': 6,
   };
   if (sinceId && sinceId != 0) {
     params['since_id'] = sinceId;
+  }
+  if (maxId && maxId != 0) {
+    params['max_id'] = maxId;
   }
   console.log(params);
   T.get('statuses/home_timeline', params, function(err, reply) {
@@ -359,16 +362,21 @@ exports.markTweetInterested = function(tweetId, user, res) {
 
 exports.getUserKeywords = function(user, callback) {
   UserKeywordModel.find({userId: user._id}, function(err, docs) {
+    var newDocs = [];
     if (!err && docs != null) {
       for (var i = 0; i < docs.length; i++) {
         var doc = docs[i];
-        doc.relevance = getWordRelevance(doc);
+        var result = {
+          'doc': doc,
+          'relevance': getWordRelevance(doc)
+        }
+        newDocs.push(result);
       }
-      docs.sort(function(a, b) {
+      newDocs.sort(function(a, b) {
           return b.relevance - a.relevance;
       });
     }
-    callback(err, docs);
+    callback(err, newDocs);
   });
 };
 
@@ -377,7 +385,6 @@ var getFixedKeyword = function(keyword) {
 };
 
 exports.syncTweets = function(user, tweets, callback) {
-  console.log(tweets);
   for (var i = 0; i < tweets.length; i++) {
     var tweetInfo = tweets[i];
     var tweetId = tweetInfo['tweetId'];

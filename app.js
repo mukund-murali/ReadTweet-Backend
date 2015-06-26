@@ -158,20 +158,13 @@ var twitterUtils = require('./utils/twitterUtils');
 
 signedInRouter.route('/tweets')
   .get(function(req, res) {
-    var keyword = "u.s";
-    UserKeywordModel.findOne({keyword: keyword, userId: req.user._id}, function(err, doc) {
-      if (err || doc == null) {
-        console.log("no found");
-      } else {
-        console.log("found");
-      }
-    });
     var deviceId = req.query.device_id;
     var twitterUserId = req.query.user_id;
     var sinceTweetId = req.query.since_tweet_id;
+    var maxTweetId = req.query.max_tweet_id;
     var user = req.user;
   
-    twitterUtils.getRelevantTweetsFromTwitter(user, sinceTweetId, function(err, relevantTweets, allTweets) {
+    twitterUtils.getRelevantTweetsFromTwitter(user, sinceTweetId, maxTweetId, function(err, relevantTweets, allTweets) {
       if (err) return res.send(err);
       var respJSON = {
         tweets: allTweets,
@@ -186,6 +179,19 @@ signedInRouter.route('/sync')
     var user = req.user;
     twitterUtils.syncTweets(user, req.body, function(err) {
       res.json({message: 'Hello'});
+    });
+  });
+
+signedInRouter.route('/keywords')
+  .get(function(req, res) {
+    twitterUtils.getUserKeywords(req.user, function(err, userKeywords) {
+      if (err) {
+        console.log(err);
+        res.status(400);
+        return res.send(err);
+      }
+      var resp = {'userKeywords': userKeywords};
+      res.json(resp);
     });
   });
 
