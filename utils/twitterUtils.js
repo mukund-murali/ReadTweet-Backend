@@ -1,3 +1,5 @@
+var commonUtils = require('./common');
+
 var request = require('request');
 var secrets = require('../config/secrets');
 var Twit = require('twit');
@@ -21,10 +23,21 @@ var getTweetString = function(tweet) {
   return tweet.text;
 };
 
+var INTERESTED_FACTOR = 5;
+var SKIPPED_FACTOR = -1;
+var IGNORED_FACTOR = -4;
+
 var getWordRelevance = function(obj) {
   var interested = obj.interested === undefined ? 0 : obj.interested;
   var skipped = obj.skipped === undefined ? 0 : obj.skipped;
   var relevance = (obj.occurence - obj.ignored) / obj.occurence;
+  var newRelevance = (INTERESTED_FACTOR*interested/obj.occurence) + 
+                     (SKIPPED_FACTOR*skipped/obj.occurence) +
+                     (IGNORED_FACTOR*obj.ignored/obj.occurence);
+  // convert range does not work for negative numbers.
+  // so converting range from (-4, 5) to (0, 9)
+  // and then back to (0, 1) for easy relevance matching.
+  var convertedRelevance = commonUtils.convertRange(newRelevance + 4, 0, 9, 0, 1);
   return relevance;
 };
 

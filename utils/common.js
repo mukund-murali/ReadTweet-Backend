@@ -10,3 +10,7 @@ exports.uniqueNumber = function() {
     }
     return date;
 };
+
+exports.convertRange = function(input, oldLower, oldUpper, newLower, newUpper) {
+	return newLower + (input)/(oldUpper - oldLower) * (newUpper - newLower);
+}
