@@ -280,6 +280,7 @@ exports.getRelevantTweetsFromTwitter = function(user, sinceId, maxId, callback) 
   T.get('statuses/home_timeline', params, function(err, reply) {
     if (err) return callback(err);
     allTweets = reply;
+    console.log("Tweets received: ", allTweets.length);
     _this.getRelevantTweets(allTweets, user, callback);
   });
 };
@@ -384,7 +385,7 @@ exports.getUserKeywords = function(user, callback) {
         newDocs.push(result);
       }
       newDocs.sort(function(a, b) {
-          return b.relevance - a.relevance;
+          return b.relevance - a.relevance || b.interested - a.interested;
       });
     }
     callback(err, newDocs);
