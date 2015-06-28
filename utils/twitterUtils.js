@@ -291,6 +291,7 @@ exports.getRelevantTweetsFromTwitter = function(user, sinceId, maxId, callback) 
 };
 
 var getNewUserKeyword = function(keyword, user) {
+  var keyword = getFixedKeyword(keyword);
   var obj = new UserKeywordModel();
   obj.userId = user._id;
   obj.keyword = keyword;
@@ -303,6 +304,7 @@ var getNewUserKeyword = function(keyword, user) {
 };
 
 exports.markInterested = function(keyword, user) {
+  var keyword = getFixedKeyword(keyword);
   UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
     if (err || doc === null) {
       doc = getNewUserKeyword(keyword, user);
@@ -314,6 +316,7 @@ exports.markInterested = function(keyword, user) {
 };
 
 exports.markConsumed = function(keyword, user) {
+  var keyword = getFixedKeyword(keyword);
   UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
     if (err || doc === null) {
       doc = getNewUserKeyword(keyword, user);
@@ -325,6 +328,7 @@ exports.markConsumed = function(keyword, user) {
 };
 
 exports.markIgnored = function(keyword, user) {
+  var keyword = getFixedKeyword(keyword);
   UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
     if (err || doc === null) {
       doc = getNewUserKeyword(keyword, user);
