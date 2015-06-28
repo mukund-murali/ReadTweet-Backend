@@ -14,7 +14,7 @@ THRESHOLD_FOR_WORD_RELEVANCE = 0.5
 THRESHOLD_FOR_TWEET_RELEVANCE = 0.5
 
 INTERESTED_FACTOR = 5;
-SKIPPED_FACTOR = 1;
+SKIPPED_FACTOR = 0.5;
 IGNORED_FACTOR = -4;
 
 var getTweetId = function(tweet) {
@@ -36,7 +36,7 @@ var getWordRelevance = function(obj) {
   // so converting range from (-4, 5) to (0, 9)
   // and then back to (0, 1) for easy relevance matching.
   var convertedRelevance = commonUtils.convertRange(newRelevance + 4, 0, 9, 0, 1);
-  return relevance;
+  return convertedRelevance;
 };
 
 var isRelevantKeyword = function(keyword, user, callback) {
@@ -121,7 +121,9 @@ var KEY_TEXT = "text";
 var API_KEY = "apikey";
 var OUTPUT_MODE = "outputMode";
 
-var ALCHEMY_API_KEY = "53a800df7583acad0f0c37d3e5fad54a91e2b3ae";
+var MUKUND_API_KEY = "53a800df7583acad0f0c37d3e5fad54a91e2b3ae";
+var SOWMYA_API_KEY = "6cfaaff264af25a45fc871d4d4014f56e71dff4a";
+var ALCHEMY_API_KEY = SOWMYA_API_KEY;
 
 var findKeywords = function(tweet, callback) {
   var params = {
@@ -399,34 +401,35 @@ var getFixedKeyword = function(keyword) {
 exports.syncTweets = function(user, tweets, callback) {
   for (var i = 0; i < tweets.length; i++) {
     var tweetInfo = tweets[i];
-    var tweetId = tweetInfo['tweetId'];
-    var skipped = tweetInfo['skipped'];
-    var interested = tweetInfo['interested'];
-    var ignored = tweetInfo['ignored'];
-
-    TweetModel.findOne({ tweetId: tweetId }, function (err, doc) {
-      if (err || doc === null) {
-        return;
-      }
-      keywords = doc.keywords;  
-      for (var i = 0; i < keywords.length; i++) {
-        var keyword = getFixedKeyword(keywords[i]);
-        // http://www.apaxsoftware.com/2012/05/common-javascript-mistakes-loops-and-callbacks/
-        // Reason to use closure
-        (function (keyword) {
-          UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
-            if (err || doc === null) {
-              doc = getNewUserKeyword(keyword, user);
-            }
-            doc.occurence += (ignored + skipped + interested);
-            doc.ignored += ignored;
-            doc.skipped += skipped;
-            doc.interested += interested;
-            doc.save();
-          });
-        }(keyword));
-      }
-    });
+    (function(tweetInfo) {
+      var tweetId = tweetInfo['tweetId'];
+      var skipped = tweetInfo['skipped'];
+      var interested = tweetInfo['interested'];
+      var ignored = tweetInfo['ignored'];
+      TweetModel.findOne({ tweetId: tweetId }, function (err, doc) {
+        if (err || doc === null) {
+          return;
+        }
+        keywords = doc.keywords;
+        for (var i = 0; i < keywords.length; i++) {
+          var keyword = getFixedKeyword(keywords[i]);
+          // http://www.apaxsoftware.com/2012/05/common-javascript-mistakes-loops-and-callbacks/
+          // Reason to use closure
+          (function (keyword) {
+            UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
+              if (err || doc === null) {
+                doc = getNewUserKeyword(keyword, user);
+              }
+              doc.occurence += (ignored + skipped + interested);
+              doc.ignored += ignored;
+              doc.skipped += skipped;
+              doc.interested += interested;
+              doc.save();
+            });
+          }(keyword));
+        }
+      });
+    }(tweetInfo));
   }
   callback();
 };
