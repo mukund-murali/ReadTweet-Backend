@@ -123,12 +123,12 @@ var KEY_TEXT = "text";
 var API_KEY = "apikey";
 var OUTPUT_MODE = "outputMode";
 
-var MUKUND_API_KEY = "53a800df7583acad0f0c37d3e5fad54a91e2b3ae";
-var SOWMYA_API_KEY = "6cfaaff264af25a45fc871d4d4014f56e71dff4a";
-// Use only MUKUND_API_KEY when pushing to PROD. 
+var PROD_API_KEY = "53a800df7583acad0f0c37d3e5fad54a91e2b3ae";
+var TESTING_API_KEY = "6cfaaff264af25a45fc871d4d4014f56e71dff4a";
+// Use only PROD_API_KEY when pushing to PROD. 
 // If alchemy sees a different apikey, it will block IP.
 // we definitely don't want that.
-var ALCHEMY_API_KEY = SOWMYA_API_KEY;
+var ALCHEMY_API_KEY = PROD_API_KEY;
 
 var findKeywords = function(tweet, callback) {
   var params = {
