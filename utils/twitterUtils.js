@@ -384,7 +384,7 @@ exports.markConsumed = function(keyword, user) {
 
 exports.markIgnored = function(keyword, user) {
   var keyword = getFixedKeyword(keyword);
-  UserTaxonomyModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
+  UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
     if (err || doc === null) {
       doc = getNewUserKeyword(keyword, user);
     }
@@ -417,7 +417,7 @@ exports.markTaxonomyConsumed = function(taxonomy, user) {
 };
 
 exports.markTaxonomyIgnored = function(taxonomy, user) {
-  UserKeywordModel.findOne({taxonomy: taxonomy, userId: user._id}, function(err, doc) {
+  UserTaxonomyModel.findOne({taxonomy: taxonomy, userId: user._id}, function(err, doc) {
     if (err || doc === null) {
       doc = getNewUserTaxonomy(taxonomy, user);
     }
@@ -432,7 +432,6 @@ exports.markTweetIgnored = function(tweetId, user, res) {
     if (err || doc === null) {
       return;
     }
-    keywords = doc.keywords;
     var taxonomies = doc.taxonomies;
     if (taxonomies != undefined) {
       for (var i = 0; i < taxonomies.length; i++) {
@@ -440,6 +439,7 @@ exports.markTweetIgnored = function(tweetId, user, res) {
         _this.markTaxonomyIgnored(taxonomy, user);
       }  
     }
+    var keywords = doc.keywords;
     for (var i = 0; i < keywords.length; i++) {
       var keyword = keywords[i];
       _this.markIgnored(keyword, user);
@@ -474,7 +474,7 @@ exports.markTweetInterested = function(tweetId, user, res) {
     if (err || doc === null) {
       return;
     }
-    keywords = doc.keywords;
+    var keywords = doc.keywords;
     var taxonomies = doc.taxonomies;
     if (taxonomies != undefined) {
       for (var i = 0; i < taxonomies.length; i++) {
