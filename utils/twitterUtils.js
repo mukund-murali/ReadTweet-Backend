@@ -123,7 +123,7 @@ var OUTPUT_MODE = "outputMode";
 
 var MUKUND_API_KEY = "53a800df7583acad0f0c37d3e5fad54a91e2b3ae";
 var SOWMYA_API_KEY = "6cfaaff264af25a45fc871d4d4014f56e71dff4a";
-var ALCHEMY_API_KEY = SOWMYA_API_KEY;
+var ALCHEMY_API_KEY = MUKUND_API_KEY;
 
 var findKeywords = function(tweet, callback) {
   var params = {
