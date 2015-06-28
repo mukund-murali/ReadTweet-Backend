@@ -6,6 +6,10 @@ block content
   
   hr
 
-  a.btn.btn-block.btn-twitter.btn-social(href='/login')
-    i.fa.fa-twitter
-    | Sign in with Twitter
+  if !user
+    a.btn.btn-block.btn-twitter.btn-social(href='/login')
+      i.fa.fa-twitter
+      | Sign in with Twitter
+  else
+    a.btn.btn-block.btn-twitter.btn-social(href='/api/twitter')
+      | Go to Dashboard

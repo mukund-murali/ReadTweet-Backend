@@ -1,3 +1,5 @@
+// UNTOUCHED copy from hackstarter project
+
 var _ = require('lodash');
 var async = require('async');
 var crypto = require('crypto');

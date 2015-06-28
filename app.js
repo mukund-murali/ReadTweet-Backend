@@ -114,8 +114,6 @@ app.post('/account/password', passportConf.isAuthenticated, userController.postU
 app.post('/account/delete', passportConf.isAuthenticated, userController.postDeleteAccount);
 app.get('/account/unlink/:provider', passportConf.isAuthenticated, userController.getOauthUnlink);
 
-app.get('/api', apiController.getApi);
-app.get('/api/scraping', apiController.getScraping);
 app.get('/api/twitter', passportConf.isAuthenticated, passportConf.isAuthorized, apiController.getTwitter);
 app.post('/api/twitter', passportConf.isAuthenticated, passportConf.isAuthorized, apiController.postTwitter);
 app.get('/keywords', twitterController.getKeywords);
@@ -165,7 +163,10 @@ signedInRouter.route('/tweets')
     var user = req.user;
   
     twitterUtils.getRelevantTweetsFromTwitter(user, sinceTweetId, maxTweetId, function(err, relevantTweets, allTweets) {
-      if (err) return res.send(err);
+      if (err) {
+        res.status(500);
+        return res.send(err);
+      }
       var respJSON = {
         tweets: allTweets,
         relevantTweets: relevantTweets

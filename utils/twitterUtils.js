@@ -128,7 +128,7 @@ var SOWMYA_API_KEY = "6cfaaff264af25a45fc871d4d4014f56e71dff4a";
 // Use only MUKUND_API_KEY when pushing to PROD. 
 // If alchemy sees a different apikey, it will block IP.
 // we definitely don't want that.
-var ALCHEMY_API_KEY = MUKUND_API_KEY;
+var ALCHEMY_API_KEY = SOWMYA_API_KEY;
 
 var findKeywords = function(tweet, callback) {
   var params = {
@@ -285,9 +285,10 @@ exports.getRelevantTweetsFromTwitter = function(user, sinceId, maxId, callback) 
   }
   console.log(params);
   T.get('statuses/home_timeline', params, function(err, reply) {
-    if (err) return callback(err);
+    if (err) {
+      return callback(err);
+    }
     allTweets = reply;
-    console.log("Tweets received: ", allTweets.length);
     _this.getRelevantTweets(allTweets, user, callback);
   });
 };

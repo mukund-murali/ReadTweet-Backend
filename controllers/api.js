@@ -7,58 +7,21 @@ var request = require('request');
 var Twit = require('twit');
 var _ = require('lodash');
 
-/**
- * GET /api
- * List of API examples.
- */
-exports.getApi = function(req, res) {
-  res.render('api/index', {
-    title: 'API Examples'
-  });
-};
-
-/**
- * GET /api/scraping
- * Web scraping example using Cheerio library.
- */
-exports.getScraping = function(req, res, next) {
-  request.get('https://news.ycombinator.com/', function(err, request, body) {
-    if (err) return next(err);
-    var $ = cheerio.load(body);
-    var links = [];
-    $('.title a[href^="http"], a[href^="https"]').each(function() {
-      links.push($(this));
-    });
-    res.render('api/scraping', {
-      title: 'Web Scraping',
-      links: links
-    });
-  });
-};
-
 var twitterUtils = require('../utils/twitterUtils');
 
-/**
- * GET /api/twitter
- * Twiter API example.
- */
 exports.getTwitter = function(req, res, next) {
   var sinceId = undefined;
   var maxId = undefined;
   twitterUtils.getRelevantTweetsFromTwitter(req.user, sinceId, maxId, function(err, relevantTweets, allTweets) {
     if (err) return next(err);
     res.render('api/twitter', {
-      title: 'Tweets',
+      title: 'Dashboard',
       tweets: allTweets,
       relevantTweets: relevantTweets
     });
   });
 };
 
-/**
- * POST /api/twitter
- * Post a tweet.
- */
 exports.postTwitter = function(req, res, next) {
   req.assert('tweet', 'Tweet cannot be empty.').notEmpty();
   var errors = req.validationErrors();

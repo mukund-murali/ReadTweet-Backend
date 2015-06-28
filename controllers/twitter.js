@@ -4,7 +4,7 @@ exports.getKeywords = function(req, res, next) {
 	twitterUtils.getUserKeywords(req.user, function(err, userKeywords) {
     if (err) return next(err);
     res.render('keywords', {
-      title: 'All Keywords',
+      title: 'Keywords',
       userKeywords: userKeywords,
     });
   });
