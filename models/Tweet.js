@@ -4,7 +4,8 @@ var Schema       = mongoose.Schema;
 var TweetKeywordSchema   = new Schema({
     tweetId: Number,
     keywords: Array,
-    tweetString: String
+    tweetString: String,
+    taxonomies: Array
 });
 
 module.exports = mongoose.model('Tweet', TweetKeywordSchema);

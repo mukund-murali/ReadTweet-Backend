@@ -196,6 +196,18 @@ signedInRouter.route('/keywords')
     });
   });
 
+signedInRouter.route('/taxonomy')
+  .get(function(req, res) {
+    twitterUtils.getUserTaxonomies(req.user, function(err, userTaxonomies) {
+      if (err) {
+        res.status(400);
+        return res.send(err);
+      }
+      var resp = {'userTaxonomies': userTaxonomies};
+      res.json(resp);
+    });
+  });
+
 signedInRouter.route('/tweets/ignore/:tweet_id')
   .post(function(req, res) {
     var tweetId = req.params.tweet_id;

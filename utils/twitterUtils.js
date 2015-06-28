@@ -6,6 +6,7 @@ var Twit = require('twit');
 
 var TweetModel = require('../models/Tweet');
 var UserKeywordModel = require('../models/UserKeyword');
+var UserTaxonomyModel = require('../models/UserTaxonomy');
 
 var _this = this;
 var _ = require('lodash');
@@ -26,6 +27,22 @@ var getTweetString = function(tweet) {
 };
 
 var getWordRelevance = function(obj) {
+  var interested = obj.interested === undefined ? 0 : obj.interested;
+  var skipped = obj.skipped === undefined ? 0 : obj.skipped;
+  var relevance = (obj.occurence - obj.ignored) / obj.occurence;
+  var newRelevance = (INTERESTED_FACTOR * interested / obj.occurence) + 
+                     (SKIPPED_FACTOR * skipped / obj.occurence) +
+                     (IGNORED_FACTOR * obj.ignored / obj.occurence);
+  // convert range does not work for negative numbers.
+  // so converting range from (-4, 5) to (0, 9)
+  // and then back to (0, 1) for easy relevance matching.
+  var convertedRelevance = commonUtils.convertRange(newRelevance + 4, 0, 9, 0, 1);
+  // rounding to 3 digits
+  convertedRelevance = Math.round(convertedRelevance * 1000) / 1000;
+  return convertedRelevance;
+};
+
+var getTaxonomyRelevance = function(obj) {
   var interested = obj.interested === undefined ? 0 : obj.interested;
   var skipped = obj.skipped === undefined ? 0 : obj.skipped;
   var relevance = (obj.occurence - obj.ignored) / obj.occurence;
@@ -104,10 +121,11 @@ var getNoRelevantKeywords = function(keywords, user, callback) {
 # before using any tweet for any processing, save the tweet data temporarily. 
 # this saves all the required information in a temporary database for faster retreival in the future. 
 */
-var _saveTweetInfo = function(tweetId, tweetString, keywords, callback) {
+var _saveTweetInfo = function(tweetId, tweetString, keywords, taxonomies, callback) {
   var tweetObj = new TweetModel();
   tweetObj.tweetId = tweetId;
   tweetObj.keywords = keywords;
+  tweetObj.taxonomies = taxonomies;
   tweetObj.tweetString = tweetString;
 
   tweetObj.save(function(err) {
@@ -119,6 +137,10 @@ var _saveTweetInfo = function(tweetId, tweetString, keywords, callback) {
 
 var ALCHEMY_API_GET_TEXT_RANKED_KEYKORDS_URL = "http://access.alchemyapi.com/calls/text/TextGetRankedKeywords";
 
+var COMBINED_CALL_URL = "http://access.alchemyapi.com/calls/text/TextGetCombinedData";
+
+var REQUIRED_FEATURES = "keyword, taxonomy";
+
 var KEY_TEXT = "text";
 var API_KEY = "apikey";
 var OUTPUT_MODE = "outputMode";
@@ -128,40 +150,55 @@ var TESTING_API_KEY = "6cfaaff264af25a45fc871d4d4014f56e71dff4a";
 // Use only PROD_API_KEY when pushing to PROD. 
 // If alchemy sees a different apikey, it will block IP.
 // we definitely don't want that.
-var ALCHEMY_API_KEY = PROD_API_KEY;
+var ALCHEMY_API_KEY = TESTING_API_KEY;
+
+var TAXONOMY_SCORE_THRESHOLD = 0.8;
+var KEYWORD_RELEVANCE_THRESHOLD = 0.3;
 
 var findKeywords = function(tweet, callback) {
+  var tweetString = getTweetString(tweet);
   var params = {
     form: {
       apikey: ALCHEMY_API_KEY,
-      text: getTweetString(tweet),
+      text: tweetString,
       outputMode: 'json'
     }
   };
-  request.post(ALCHEMY_API_GET_TEXT_RANKED_KEYKORDS_URL, params, function(err, httpResponse, body) {
+  request.post(COMBINED_CALL_URL, params, function(err, httpResponse, body) {
     if (err) {
       callback([]);
       return;
     }
     body = JSON.parse(body);
-    var keywords = [];
     var keywordResponse = body.keywords;
-    if (keywordResponse === undefined) {
-      callback(keywords);
-      return;
+    var keywords = [];
+    if (keywordResponse != undefined) {
+      for (var i = 0; i < keywordResponse.length; i++) {
+        var obj = keywordResponse[i];
+        if (obj.relevance > KEYWORD_RELEVANCE_THRESHOLD) {
+          keywords.push(obj.text);
+        }
+      }
     }
-    for (var i = 0; i < keywordResponse.length; i++) {
-        keywords.push(keywordResponse[i].text);
+    var taxonomyResponse = body.taxonomy;
+    var taxonomies = [];
+    if (taxonomyResponse != undefined) {
+      for (var i = 0; i < taxonomyResponse.length; i++) {
+        var obj = taxonomyResponse[i];
+        if (obj.score > TAXONOMY_SCORE_THRESHOLD) {
+          taxonomies.push(obj.label);
+        }
+      }
     }
-    callback(keywords);
+    callback(keywords, taxonomies);
   });
 };
 
 var saveTweetInfo = function(tweet, callback) {
-  findKeywords(tweet, function(keywords) {
+  findKeywords(tweet, function(keywords, taxonomies) {
     tweetId = getTweetId(tweet);
     tweetString = getTweetString(tweet);
-    _saveTweetInfo(tweetId, tweetString, keywords, callback);
+    _saveTweetInfo(tweetId, tweetString, keywords, taxonomies, callback);
   });
 };
 
@@ -190,6 +227,7 @@ var getKeywords = function(tweet, callback) {
 
 var isRelevantTweet = function(tweet, user, callback) {
   // if a tweet is not from a news channel, always mark it relevant
+  // TODO: use taxonomy also here.
   if (!isTweetFromANews(tweet)) {
     callback(true, tweet);
     return;
@@ -283,7 +321,7 @@ exports.getRelevantTweetsFromTwitter = function(user, sinceId, maxId, callback) 
   if (maxId && maxId != 0) {
     params['max_id'] = maxId;
   }
-  console.log(params);
+  // console.log(params);
   T.get('statuses/home_timeline', params, function(err, reply) {
     if (err) {
       return callback(err);
@@ -306,6 +344,20 @@ var getNewUserKeyword = function(keyword, user) {
   return obj;
 };
 
+var getNewUserTaxonomy = function(taxonomy, user) {
+  var obj = new UserTaxonomyModel();
+  obj.userId = user._id;
+  obj.taxonomy = taxonomy;
+  obj.occurence = 0;
+  obj.ignored = 0;
+  obj.interested = 0;
+  obj.skipped = 0;
+  obj.save();
+  return obj;
+};
+
+// TOO Many repeats from keyword and taxonomy :(
+// Need to clean this shit up :(
 exports.markInterested = function(keyword, user) {
   var keyword = getFixedKeyword(keyword);
   UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
@@ -332,9 +384,42 @@ exports.markConsumed = function(keyword, user) {
 
 exports.markIgnored = function(keyword, user) {
   var keyword = getFixedKeyword(keyword);
-  UserKeywordModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
+  UserTaxonomyModel.findOne({keyword: keyword, userId: user._id}, function(err, doc) {
     if (err || doc === null) {
       doc = getNewUserKeyword(keyword, user);
+    }
+    doc.occurence += 1;
+    doc.ignored += 1;  
+    doc.save();
+  });
+};
+
+exports.markTaxonomyInterested = function(taxonomy, user) {
+  UserTaxonomyModel.findOne({taxonomy: taxonomy, userId: user._id}, function(err, doc) {
+    if (err || doc === null) {
+      doc = getNewUserTaxonomy(taxonomy, user);
+    }
+    doc.occurence += 1;
+    doc.interested += 1;
+    doc.save();
+  });
+};
+
+exports.markTaxonomyConsumed = function(taxonomy, user) {
+  UserTaxonomyModel.findOne({taxonomy: taxonomy, userId: user._id}, function(err, doc) {
+    if (err || doc === null) {
+      doc = getNewUserTaxonomy(taxonomy, user);
+    }
+    doc.occurence += 1;
+    doc.skipped += 1;
+    doc.save();
+  });
+};
+
+exports.markTaxonomyIgnored = function(taxonomy, user) {
+  UserKeywordModel.findOne({taxonomy: taxonomy, userId: user._id}, function(err, doc) {
+    if (err || doc === null) {
+      doc = getNewUserTaxonomy(taxonomy, user);
     }
     doc.occurence += 1;
     doc.ignored += 1;  
@@ -347,7 +432,14 @@ exports.markTweetIgnored = function(tweetId, user, res) {
     if (err || doc === null) {
       return;
     }
-    keywords = doc.keywords;  
+    keywords = doc.keywords;
+    var taxonomies = doc.taxonomies;
+    if (taxonomies != undefined) {
+      for (var i = 0; i < taxonomies.length; i++) {
+        var taxonomy = taxonomies[i];
+        _this.markTaxonomyIgnored(taxonomy, user);
+      }  
+    }
     for (var i = 0; i < keywords.length; i++) {
       var keyword = keywords[i];
       _this.markIgnored(keyword, user);
@@ -361,7 +453,14 @@ exports.markTweetConsumed = function(tweetId, user, res) {
     if (err || doc === null) {
       return;
     }
-    keywords = doc.keywords;  
+    var keywords = doc.keywords;
+    var taxonomies = doc.taxonomies;
+    if (taxonomies != undefined) {
+      for (var i = 0; i < taxonomies.length; i++) {
+        var taxonomy = taxonomies[i];
+        _this.markTaxonomyConsumed(taxonomy, user);
+      }  
+    }
     for (var i = 0; i < keywords.length; i++) {
       var keyword = keywords[i];
       _this.markConsumed(keyword, user);
@@ -375,7 +474,14 @@ exports.markTweetInterested = function(tweetId, user, res) {
     if (err || doc === null) {
       return;
     }
-    keywords = doc.keywords;  
+    keywords = doc.keywords;
+    var taxonomies = doc.taxonomies;
+    if (taxonomies != undefined) {
+      for (var i = 0; i < taxonomies.length; i++) {
+        var taxonomy = taxonomies[i];
+        _this.markTaxonomyInterested(taxonomy, user);
+      }  
+    }
     for (var i = 0; i < keywords.length; i++) {
       var keyword = keywords[i];
       _this.markInterested(keyword, user);
@@ -420,7 +526,8 @@ exports.syncTweets = function(user, tweets, callback) {
         if (err || doc === null) {
           return;
         }
-        keywords = doc.keywords;
+
+        var keywords = doc.keywords;
         for (var i = 0; i < keywords.length; i++) {
           var keyword = getFixedKeyword(keywords[i]);
           // http://www.apaxsoftware.com/2012/05/common-javascript-mistakes-loops-and-callbacks/
@@ -438,8 +545,47 @@ exports.syncTweets = function(user, tweets, callback) {
             });
           }(keyword));
         }
+
+        var taxonomies = doc.taxonomies;
+        for (var i = 0; i < taxonomies.length; i++) {
+          var taxonomy = taxonomies[i];
+          (function (taxonomy) {
+            UserTaxonomyModel.findOne({taxonomy: taxonomy, userId: user._id}, function(err, doc) {
+              if (err || doc === null) {
+                doc = getNewUserTaxonomy(taxonomy, user);
+              }
+              doc.occurence += (ignored + skipped + interested);
+              doc.ignored += ignored;
+              doc.skipped += skipped;
+              doc.interested += interested;
+              doc.save();
+            });
+          }(taxonomy));
+        }
       });
     }(tweetInfo));
   }
   callback();
 };
+
+
+exports.getUserTaxonomies = function(user, callback) {
+  UserTaxonomyModel.find({userId: user._id}, function(err, docs) {
+    var newDocs = [];
+    if (!err && docs != null) {
+      for (var i = 0; i < docs.length; i++) {
+        var doc = docs[i];
+        var result = {
+          'doc': doc,
+          'relevance': getTaxonomyRelevance(doc)
+        }
+        newDocs.push(result);
+      }
+      newDocs.sort(function(a, b) {
+          return b.relevance - a.relevance || b.interested - a.interested;
+      });
+    }
+    callback(err, newDocs);
+  });
+};
+
