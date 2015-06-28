@@ -14,7 +14,7 @@ THRESHOLD_FOR_WORD_RELEVANCE = 0.5
 THRESHOLD_FOR_TWEET_RELEVANCE = 0.5
 
 INTERESTED_FACTOR = 5;
-SKIPPED_FACTOR = 0.5;
+SKIPPED_FACTOR = 1;
 IGNORED_FACTOR = -4;
 
 var getTweetId = function(tweet) {
@@ -36,6 +36,8 @@ var getWordRelevance = function(obj) {
   // so converting range from (-4, 5) to (0, 9)
   // and then back to (0, 1) for easy relevance matching.
   var convertedRelevance = commonUtils.convertRange(newRelevance + 4, 0, 9, 0, 1);
+  // rounding to 3 digits
+  convertedRelevance = Math.round(convertedRelevance * 1000) / 1000;
   return convertedRelevance;
 };
 
